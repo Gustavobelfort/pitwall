@@ -44,7 +44,8 @@ const usage = `usage:
   pitwall daemon             run the daemon in the foreground
   pitwall hook <provider>    forward an agent hook event (claude, codex, pi, gemini, opencode)
   pitwall hooks              print the hook config for every agent
-  pitwall hooks install      add hooks, pi's extension and OpenCode's plugin (--dry-run;
+  pitwall hooks install      add hooks, pi's extension, OpenCode's plugin and the
+                             pitwall skill for Claude Code and Codex (--dry-run;
                              --statusline also runs Claude Code's status line through
                              pitwall statusline, to show its plan limits)
   pitwall hooks uninstall    remove this binary's hooks and status line (--dry-run)
@@ -76,6 +77,11 @@ const usage = `usage:
                              agent once it is idle or done, and press Enter.
                              --wait waits for that turn and prints the
                              agent's reply. Exit codes as wait's
+  pitwall send <pane> [-- text]
+                             queue text (- or none: stdin) for the pane's
+                             agent and return; pitwall types it, under a
+                             header naming this pane, at the agent's next
+                             prompt
   pitwall read <pane> [--screen]
                              print the last reply of the pane's agent
                              (--screen: the text on its screen)
@@ -92,8 +98,9 @@ const usage = `usage:
   of the title. Outside a pane, name it; inside, it defaults to the
   pane's own tab. Tab commands act on the calling pane's session, else
   the most recently used one; -s <session> picks another. A pane is
-  TAB.N, the Nth pane of the tab in layout order (3.2, #3.2, review.2);
-  wait, prompt and read take one, and a tab alone is its main pane.
+  TAB.N, the Nth pane of the tab in layout order (3.2, #3.2, review.2),
+  or @ and its id from ls --json; wait, prompt, send and read take one,
+  and a tab alone is its main pane.
   pitwall worktree <cmd>     ls, new, rm, prune: this repo's git worktrees (see pitwall worktree)
   pitwall completion <shell>  bash, zsh, fish: print the shell's completion script, e.g.
                              source <(pitwall completion bash)
@@ -157,7 +164,7 @@ func main() {
 		os.Exit(runWorktree(os.Args[2:], os.Stdout, os.Stderr))
 	case "completion":
 		err = runCompletion(os.Args[2:], os.Stdout)
-	case "ls", "new", "wait", "split", "prompt", "read", "attach", "detach", "kill", "rename", "tab", "session", "queue":
+	case "ls", "new", "wait", "split", "prompt", "send", "read", "attach", "detach", "kill", "rename", "tab", "session", "queue":
 		os.Exit(runCLI(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 	default:
 		fmt.Fprint(os.Stderr, usage)
@@ -324,7 +331,8 @@ func printHooks() error {
 	fmt.Printf("# ~/.pi/agent/extensions/pitwall.ts ($PI_CODING_AGENT_DIR/extensions/pitwall.ts when set):\n%s\n", agent.PiExtension(bin))
 	fmt.Printf("# ~/.gemini/settings.json, merge into the top-level object:\n{\"hooks\": %s}\n\n", agent.GeminiHooks(bin))
 	fmt.Printf("# ~/.cursor/hooks.json, merge into the top-level object:\n{\"version\": 1, \"hooks\": %s}\n\n", agent.CursorHooks(bin))
-	fmt.Printf("# ~/.config/opencode/plugins/pitwall.js ($XDG_CONFIG_HOME/opencode/plugins/pitwall.js when set):\n%s", agent.OpenCodePlugin(bin))
+	fmt.Printf("# ~/.config/opencode/plugins/pitwall.js ($XDG_CONFIG_HOME/opencode/plugins/pitwall.js when set):\n%s\n", agent.OpenCodePlugin(bin))
+	fmt.Printf("# ~/.claude/skills/pitwall/SKILL.md, and ~/.codex/skills/pitwall/SKILL.md ($CODEX_HOME/skills/pitwall/SKILL.md when set):\n%s", agent.Skill())
 	return nil
 }
 

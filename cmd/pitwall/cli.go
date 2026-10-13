@@ -115,6 +115,12 @@ func runCLI(args []string, in *os.File, out, errOut io.Writer) int {
 		err = splitCommand(args[1:], out)
 	case len(args) > 0 && args[0] == "read":
 		err = readCommand(args[1:], out)
+	case len(args) > 0 && args[0] == "send":
+		var stdin io.Reader
+		if in != nil {
+			stdin = in
+		}
+		err = sendCommand(args[1:], stdin)
 	default:
 		err = sessionCommand(args, in, out, errOut)
 	}
@@ -386,13 +392,8 @@ func resolveTab(state model.State, session, name string) (model.Workspace, error
 	return model.Workspace{}, fmt.Errorf("ambiguous tab %q; matches %s", name, strings.Join(nums, ", "))
 }
 
-// numbered is session's tabs as pitwall ls numbers them: the sidebar's
-// order, then the detached tabs.
-func numbered(state model.State, session string) []model.Workspace {
-	all := state.Ordered(session)
-	shown := slices.DeleteFunc(slices.Clone(all), func(w model.Workspace) bool { return w.Detached })
-	return append(shown, slices.DeleteFunc(all, func(w model.Workspace) bool { return !w.Detached })...)
-}
+// numbered is model.State.Numbered.
+func numbered(state model.State, session string) []model.Workspace { return state.Numbered(session) }
 
 // tabTitle is what the sidebar shows for a tab: its chosen name, else its
 // label.
